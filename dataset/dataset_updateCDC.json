@@ -1,0 +1,19 @@
+{
+	"name": "dataset_updateCDC",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "linked_service_azuredatalakegen2",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": "empty.json",
+				"fileSystem": "tracker"
+			}
+		},
+		"schema": {}
+	}
+}
