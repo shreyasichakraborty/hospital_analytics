@@ -1,1 +1,1 @@
-This is Hospital Analytics Project
+This is Retail Analytics Project
