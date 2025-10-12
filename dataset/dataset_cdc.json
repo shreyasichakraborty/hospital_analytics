@@ -1,0 +1,27 @@
+{
+	"name": "dataset_cdc",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "linked_service_azuredatalakegen2",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": "cdc.json",
+				"fileSystem": "tracker"
+			}
+		},
+		"schema": {
+			"type": "object",
+			"properties": {
+				"cdc_timestamp": {
+					"type": "string"
+				}
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

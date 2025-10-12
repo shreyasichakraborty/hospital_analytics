@@ -1,0 +1,9 @@
+{
+	"name": "adf-onlineretail-shrey",
+	"location": "centralindia",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "79c35a4a-de83-49e1-aea4-112db746db31",
+		"tenantId": "e20689ac-5560-4098-ab6e-d77718aed9d1"
+	}
+}

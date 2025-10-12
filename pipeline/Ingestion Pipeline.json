@@ -1,0 +1,547 @@
+{
+	"name": "Ingestion Pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "CDC Lookup",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "JsonSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "JsonReadSettings"
+						}
+					},
+					"dataset": {
+						"referenceName": "dataset_cdc",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Get Metadata From Customers",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "dataset_rawfiles",
+						"type": "DatasetReference",
+						"parameters": {
+							"container": "raw",
+							"folderpath": "customer",
+							"filename": {
+								"value": "@''",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "Get Metadata From Product",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "dataset_rawfiles",
+						"type": "DatasetReference",
+						"parameters": {
+							"container": "raw",
+							"folderpath": "product",
+							"filename": {
+								"value": "@''",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "Get Metadata From Sales",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "dataset_rawfiles",
+						"type": "DatasetReference",
+						"parameters": {
+							"container": "raw",
+							"folderpath": "sales",
+							"filename": {
+								"value": "@''",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "Filter Most Recent Customer File",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "Get Metadata From Customers",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "CDC Lookup",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Metadata From Customers').output.childItems",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@greater(int(substring(item().name, add(lastIndexOf(item().name,'_'), 1), 8)),int(activity('CDC Lookup').output.value[0].cdc_timestamp ))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Filter Most Recent Product File",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "CDC Lookup",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Get Metadata From Product",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Metadata From Product').output.childItems",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@greater(int(substring(item().name,add(lastIndexOf(item().name,'_'),1),8)),int(activity('CDC Lookup').output.value[0].cdc_timestamp))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Filter Most Recent Sales File",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "CDC Lookup",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Get Metadata From Sales",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Metadata From Sales').output.childItems",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@greater(int(substring(item().name,add(lastIndexOf(item().name,'_'),1),8)),int(activity('CDC Lookup').output.value[0].cdc_timestamp) )",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "ForEachCustomerFile",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Filter Most Recent Customer File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Filter Most Recent Customer File').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Copy Customer Files",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "dataset_rawfiles",
+									"type": "DatasetReference",
+									"parameters": {
+										"container": "raw",
+										"folderpath": {
+											"value": "@substring(item().name,0,lastIndexOf(item().name,'_'))",
+											"type": "Expression"
+										},
+										"filename": {
+											"value": "@item().name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "dataset_sinkToBronze",
+									"type": "DatasetReference",
+									"parameters": {
+										"container": "bronze",
+										"folderpath": {
+											"value": "@substring(item().name,0,lastIndexOf(item().name,'_'))",
+											"type": "Expression"
+										},
+										"filename": {
+											"value": "@item().name",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "ForEachProductFile",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Filter Most Recent Product File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Filter Most Recent Product File').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Copy Product Files",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "dataset_rawfiles",
+									"type": "DatasetReference",
+									"parameters": {
+										"container": "raw",
+										"folderpath": {
+											"value": "@substring(item().name,0,lastIndexOf(item().name,'_'))",
+											"type": "Expression"
+										},
+										"filename": {
+											"value": "@item().name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "dataset_sinkToBronze",
+									"type": "DatasetReference",
+									"parameters": {
+										"container": "bronze",
+										"folderpath": {
+											"value": "@substring(item().name,0,lastIndexOf(item().name,'_'))",
+											"type": "Expression"
+										},
+										"filename": {
+											"value": "@item().name",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "ForEachSalesFile",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Filter Most Recent Sales File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Filter Most Recent Sales File').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Copy Sales Files",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "dataset_rawfiles",
+									"type": "DatasetReference",
+									"parameters": {
+										"container": "raw",
+										"folderpath": {
+											"value": "@substring(item().name,0,lastIndexOf(item().name,'_'))",
+											"type": "Expression"
+										},
+										"filename": {
+											"value": "@item().name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "dataset_sinkToBronze",
+									"type": "DatasetReference",
+									"parameters": {
+										"container": "bronze",
+										"folderpath": {
+											"value": "@substring(item().name,0,lastIndexOf(item().name,'_'))",
+											"type": "Expression"
+										},
+										"filename": {
+											"value": "@item().name",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"variables": {
+			"last_updated_date": {
+				"type": "String"
+			},
+			"test": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-10-12T12:57:33Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

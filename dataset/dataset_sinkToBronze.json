@@ -1,0 +1,45 @@
+{
+	"name": "dataset_sinkToBronze",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "linked_service_azuredatalakegen2",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"container": {
+				"type": "string",
+				"defaultValue": "bronze"
+			},
+			"folderpath": {
+				"type": "string",
+				"defaultValue": "''"
+			},
+			"filename": {
+				"type": "string",
+				"defaultValue": "''"
+			}
+		},
+		"annotations": [],
+		"type": "Parquet",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@dataset().filename",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@dataset().folderpath",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@dataset().container",
+					"type": "Expression"
+				}
+			},
+			"compressionCodec": "snappy"
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}
